@@ -17,6 +17,7 @@ Then simply run the server application:
 
 And it should be good to go! based on your config.yml, it will edit the payload response.
 `http://x.x.x.x:xxxx/payload` will give you a python file for the clients. as long as this is running and it is set up correctly, the client will contact the server and give you control.
+I suggest you compile it with nuitka and MSVC to give it the lowest possible detection rating on antivirus.
 if you go to `http://x.x.x.x:xxxx/` you will be able to access the WebUi and login with the credentials you set in config.yml.
 
 If possible, try to run the c2 through https to ensure security.
