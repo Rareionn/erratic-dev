@@ -5,7 +5,7 @@ HOW TO INSTALL
 Ensure you have python3.8+, make an issue if you have any problems with this software.
 
 Get and enter the repo:
-`git clone https://github.com/elapt1c/erratic.git`
+`git clone 0https://github.com/elapt1c/erratic.git`
 `cd erratic`
 
 Install all required python packages (on the server side)

