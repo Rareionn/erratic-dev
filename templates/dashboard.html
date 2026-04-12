@@ -410,7 +410,7 @@
         socket.emit('command', { 'command': cmd, 'client_id': current_client_id });
     };
 
-    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isControlMode) { isControlMode = false; document.getElementById('control-overlay').style.display = 'none'; socket.emit('command', { 'command': '#scrsht reset', 'client_id': current_client_id }); } });
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isControlMode) { isControlMode = false; document.getElementById('control-overlay').style.display = 'none'; socket.emit('command', { 'command': '#scrsht 1000', 'client_id': current_client_id }); } });
     socket.on('screenshot_data', (data) => { if (data.client_id === current_client_id) { const s = "data:image/jpeg;base64," + data.image_data; document.getElementById('screenshot-image').src = s; if (isControlMode) document.getElementById('control-image').src = s; } });
 
     /* TOOLS & BROADCAST */
