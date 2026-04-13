@@ -11,7 +11,7 @@ Get and enter the repo:
 Install all required python packages (on the server side)
 `pip install -r requirements.txt`
 
-Configure the config.yml file to your liking.
+Configure the `config.yml` file (VERY IMPORTANT FOR NON-LOCAL) to your liking.
 Then simply run the server application:
 `python3 main.py`
 
