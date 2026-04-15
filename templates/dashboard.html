@@ -87,6 +87,39 @@
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: var(--bg); }
         ::-webkit-scrollbar-thumb { background: var(--accent-muted); }
+        /* User Management Sidebar */
+        .sidebar-right {
+            position: fixed;
+            top: 0; right: -420px;
+            width: 420px; /* Max form width + padding */
+            height: 100vh;
+            background: var(--panel);
+            box-shadow: -4px 0 20px #000c;
+            z-index: 1001;
+            transition: right 0.35s cubic-bezier(.6,0,.51,1);
+            border-left: 2px solid var(--accent);
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-right.active {
+            right: 0;
+        }
+        .user-sidebar-header {
+            font-size: 1.6em;
+            font-weight: bold;
+            background: var(--sidebar);
+            color: var(--accent);
+            letter-spacing: 2px;
+            padding: 1.2rem 2.5rem 1.2rem 2rem;
+            border-bottom: 1px solid var(--border);
+            user-select: none;
+        }
+        .user-mgmt-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+        #toggle-pw-vis:hover svg path, #toggle-pw-vis:focus svg path { stroke: #fff!important; }
+        #toggle-pw-vis:active svg path { stroke: #e8d200!important; }
     </style>
 </head>
 <body>
@@ -119,10 +152,15 @@
     </div>
 
     <div class="main-view">
-        <div class="top-nav">
-            <div id="node-title" style="font-weight: 700; color: var(--accent);">SELECT A NODE</div>
-            <div id="conn-status-indicator" style="font-size: 0.7rem;"></div>
-        </div>
+        <div class="top-nav" style="display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 1em;">
+        <div id="node-title" style="font-weight: 700; color: var(--accent);">SELECT A NODE</div>
+        <div id="conn-status-indicator" style="font-size: 0.7rem;"></div>
+    </div>
+    <button id="open-user-sidebar" title="User Management" style="background:none;border:none;font-size:1.5em;cursor:pointer;color:var(--accent);padding-right:1em;">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4" stroke="#ff0000" stroke-width="2"/><path d="M4 20C4 15.6 19.6 15.6 20 20" stroke="#ff0000" stroke-width="2"/></svg>
+    </button>
+</div>
 
         <div class="stats-bar">
             <div class="stat-item">
@@ -131,13 +169,41 @@
             </div>
         </div>
 
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('tab-terminal')">Console</button>
-            <button class="tab-btn" onclick="switchTab('tab-files')">Files</button>
-            <button class="tab-btn" onclick="switchTab('tab-tools')">Tools</button>
-            <button class="tab-btn" onclick="switchTab('tab-processes')">Processes</button>
-            <button class="tab-btn" onclick="switchTab('tab-identity')">Identity</button>
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('tab-terminal')">Console</button>
+    <button class="tab-btn" onclick="switchTab('tab-files')">Files</button>
+    <button class="tab-btn" onclick="switchTab('tab-tools')">Tools</button>
+    <button class="tab-btn" onclick="switchTab('tab-processes')">Processes</button>
+    <button class="tab-btn" onclick="switchTab('tab-identity')">Identity</button>
+</div>
+
+<!-- User Management Sidebar -->
+<div id="user-sidebar" class="sidebar-right" tabindex="-1">
+    <div class="user-sidebar-header">
+        USERS
+        <span id="close-user-sidebar" style="cursor:pointer;float:right;font-size:1.6em;font-weight:bold;" title="Close">&times;</span>
+    </div>
+    <div class="user-mgmt-content">
+        <div style="display:flex;flex-direction:column;gap:1.2rem;padding:1.5rem;">
+            <div id="add-user-form" style="display:flex;gap:10px;align-items:center;">
+                <input type="text" id="add-username" placeholder="Username" class="meta-input" style="flex:2;">
+                <div style="position:relative;flex:2;">
+                    <input type="password" id="add-password" placeholder="Password" class="meta-input" style="width:100%;padding-right:32px;">
+                    <span id="toggle-pw-vis" style="position:absolute;top:8px;right:8px;cursor:pointer;width:22px;height:22px;display:flex;align-items:center;">
+                        <!-- SVG EYE ICON -->
+                        <svg id="eye-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px;"><path d="M1 10C1 10 4.5 4.5 10 4.5C15.5 4.5 19 10 19 10C19 10 15.5 15.5 10 15.5C4.5 15.5 1 10 1 10Z" stroke="#ff0000" stroke-width="2"/><circle id="eye-dot" cx="10" cy="10" r="3" stroke="#ff0000" stroke-width="2"/></svg>
+                    </span>
+                </div>
+                <button class="btn-primary" onclick="addUser()">Add User</button>
+            </div>
+            <table style="width:100%; font-size:0.95em;">
+                <thead><tr><th style="text-align:left;">Username</th><th></th></tr></thead>
+                <tbody id="users-tbody"></tbody>
+            </table>
         </div>
+    </div>
+</div>
+<!-- END User Management Sidebar -->
 
         <!-- CONSOLE -->
         <div id="tab-terminal" class="content-area active">
@@ -253,6 +319,105 @@
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         event.currentTarget.classList.add('active');
+    }
+
+    // --- User Management Sidebar logic ---
+    function openUserSidebar() {
+        document.getElementById('user-sidebar').classList.add('active');
+        loadUsers();
+    }
+    function closeUserSidebar() {
+        document.getElementById('user-sidebar').classList.remove('active');
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('open-user-sidebar').onclick = openUserSidebar;
+        document.getElementById('close-user-sidebar').onclick = closeUserSidebar;
+        // Password eye toggle
+        const pwInput = document.getElementById('add-password');
+        const eyeBtn = document.getElementById('toggle-pw-vis');
+        let isPw = true;
+        eyeBtn.onclick = function() {
+            isPw = !isPw;
+            pwInput.type = isPw ? 'password' : 'text';
+            // Update eye icon appearance
+            document.getElementById('eye-dot').setAttribute('fill', isPw ? 'none' : '#ff0000');
+        };
+        // Sidebar: close with ESC
+        document.addEventListener('keydown', function(evt) {
+            if (evt.key === 'Escape') {
+                let sb = document.getElementById('user-sidebar');
+                if(sb.classList.contains('active')) closeUserSidebar();
+            }
+        });
+    });
+
+    function loadUsers() {
+        fetch('/api/users').then(r => r.json()).then(data => {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = '';
+            if (data.users && Array.isArray(data.users)) {
+                data.users.forEach((u, idx) => {
+                    const pwId = `user-pw-${idx}`;
+                    const eyeId = `user-eye-${idx}`;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${escapeHtml(u.username)}</td><td><div style='display:flex;align-items:center;gap:4px;'><input type='password' class='user-password-input' id='${pwId}' value='${escapeHtml(u.password)}' style='font-family:inherit;width:112px;padding-right:26px;border-radius:2px;border:1px solid var(--border);background:#111;color:#fff;font-size:0.97em;'><span class='user-eye-icon' id='${eyeId}' style='display:inline-flex;align-items:center;cursor:pointer;' tabindex='0' title='Show/Hide Password'>
+                        <svg class='icon-eye' data-state='closed' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg' style='width:18px;height:18px;'><path d='M1 10C1 10 4.5 4.5 10 4.5C15.5 4.5 19 10 19 10C19 10 15.5 15.5 10 15.5C4.5 15.5 1 10 1 10Z' stroke='#ff0000' stroke-width='2'/><circle class='eye-dot' cx='10' cy='10' r='3' stroke='#ff0000' stroke-width='2' fill='none'/></svg>
+                    </span><button class='btn-danger' style='margin-left:10px;' onclick="deleteUser('${encodeURIComponent(u.username)}')">Remove</button></div></td>`;
+                    tbody.appendChild(tr);
+                });
+                // Add per-user eye toggling after rendering
+                data.users.forEach((u, idx) => {
+                    const pwInput = document.getElementById('user-pw-'+idx);
+                    const eyeBtn = document.getElementById('user-eye-'+idx);
+                    if (!pwInput || !eyeBtn) return;
+                    let isPw = true;
+                    eyeBtn.onclick = function() {
+                        isPw = !isPw;
+                        pwInput.type = isPw ? 'password' : 'text';
+                        // Style for open/closed
+                        const eyeSVG = eyeBtn.querySelector('svg');
+                        const dot = eyeSVG.querySelector('.eye-dot');
+                        if(!isPw) { dot.setAttribute('fill','#ff0000'); eyeSVG.setAttribute('data-state','open'); }
+                        else { dot.setAttribute('fill','none'); eyeSVG.setAttribute('data-state','closed'); }
+                    };
+                    eyeBtn.onkeydown = function(e) { if(e.key === ' '||e.key==='Enter') { eyeBtn.onclick(); e.preventDefault(); } };
+                });
+            }
+        })
+    }
+
+    function addUser() {
+        const username = document.getElementById('add-username').value;
+        const password = document.getElementById('add-password').value;
+        if (!username || !password) { alert('Username and password required'); return; }
+        fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                document.getElementById('add-username').value = '';
+                document.getElementById('add-password').value = '';
+                loadUsers();
+            } else {
+                alert(data.error || 'Failed to add user');
+            }
+        })
+    }
+
+    function deleteUser(username) {
+        username = decodeURIComponent(username);
+        if (!confirm('Are you sure you want to remove user ' + username + '?')) return;
+        fetch('/api/users/' + encodeURIComponent(username), {
+            method: 'DELETE'
+        }).then(r => r.json()).then(data => {
+            if(data.success) loadUsers();
+            else alert(data.error || 'Failed to remove user');
+        })
+    }
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"'/]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#47;'}[s]));
     }
 
     socket.on('connect', () => { socket.emit('join_dashboard'); });

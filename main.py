@@ -36,7 +36,23 @@ def init_db():
                  (hostname TEXT PRIMARY KEY, alias TEXT, description TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS macros
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, command TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+    )''')
     conn.commit()
+    # Seed initial user from config if no users exist
+    c.execute("SELECT COUNT(*) FROM users")
+    count = c.fetchone()[0]
+    if count == 0:
+        with open('./config.yml', 'r') as f:
+            cfg = yaml.safe_load(f)
+            username = cfg.get('username', 'admin')
+            password = cfg.get('password', 'admin')
+            c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+            print(f"[INFO] Initial user '{username}' created. Remove password from config.yml now.")
+        conn.commit()
     conn.close()
 init_db()
 
@@ -127,6 +143,52 @@ def periodic_monitor(socketio_instance):
             except Exception as e:
                 logger.error(f"Periodic update error: {e}")
 
+# --- User Management API ---
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    if not session.get('logged_in') or not session.get('username'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('SELECT username, password FROM users')
+    users = [{'username': row[0], 'password': row[1]} for row in c.fetchall()]
+    conn.close()
+    return jsonify({'users': users})
+
+@app.route('/api/users', methods=['POST'])
+def add_user():
+    if not session.get('logged_in') or not session.get('username'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    if not username or not password:
+        return jsonify({'error': 'Missing fields'}), 400
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    try:
+        c.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({'error': 'User already exists'}), 409
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/api/users/<username>', methods=['DELETE'])
+def delete_user(username):
+    if not session.get('logged_in') or not session.get('username'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    # Don't let user delete their own session for now
+    if username == session.get('username'):
+        return jsonify({'error': 'Cannot delete current user'}), 400
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('DELETE FROM users WHERE username=?', (username,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
 # --- Routes ---
 @app.route('/')
 def index():
@@ -136,8 +198,16 @@ def index():
 def login():
     if request.method == 'POST':
         data = request.json
-        if data.get('username') == ADMIN_USERNAME and data.get('password') == ADMIN_PASSWORD:
+        username = data.get('username')
+        password = data.get('password')
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute('SELECT username FROM users WHERE username = ? AND password = ?', (username, password))
+        user = c.fetchone()
+        conn.close()
+        if user:
             session['logged_in'] = True
+            session['username'] = username
             return jsonify(message="Success"), 200
         return jsonify(message='Invalid'), 401
     return render_template('login.html')
@@ -145,11 +215,12 @@ def login():
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)
+    session.pop('username', None)
     return redirect(url_for('login'))
 
 @app.route('/dashboard')
 def dashboard():
-    if 'logged_in' in session:
+    if session.get('logged_in') and session.get('username'):
         return render_template('dashboard.html')
     return redirect(url_for("login"))
 
